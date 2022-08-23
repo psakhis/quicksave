@@ -1,0 +1,10 @@
+{
+	"plugin": {
+		"name": "quicksave",
+		"description": "Quicksave macro plugin",
+		"version": "0.0.1",
+		"author": "Sergi Clara",
+		"type": "plugin",
+		"start": "false"
+	  }
+}

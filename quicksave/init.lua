@@ -15,7 +15,8 @@ local quicksave_settings = {
 	save_input = "",
 	load_input = "",
 	slot_state = 0,
-	snapshot = false
+	snapshot = false,	
+	autoload = false
 }
 
 function quicksave.set_folder(path)
@@ -46,6 +47,25 @@ function quicksave.startplugin()
 		end
 	end
 	
+	local function save()        
+               local scr = nil
+               manager.machine:save(quicksave_settings.slot_state)
+	       if quicksave_settings.snapshot then			        
+		   for i,v in pairs(manager.machine.screens) do 
+		      scr = i		         	         
+		      break
+		   end		   
+		   local snap_file = emu.romname() .. "/" .. quicksave_settings.slot_state .. ".png"  		        		      		       
+		   manager.machine.screens[scr]:snapshot(snap_file)
+	       end		
+        end
+        
+	local function auto_load()	      		
+		if quicksave_settings.autoload then			
+			manager.machine:load(quicksave_settings.slot_state)							
+		end
+	end
+		
 	local function menu_populate()
 		local menu = {}
 									      
@@ -56,7 +76,7 @@ function quicksave.startplugin()
 		menu[2] =  { _p('plugin-quicksave', 'Load Input'), quickload_input,  edit_switch_poller and 'lr' or '' }
 	        
 	        local slot_state = quicksave_settings.slot_state
-	        menu[3] =  { _p('plugin-quicksave', 'Save State Slot'), slot_state, (slot_state > 0) and 'lr' or 'r' }
+	        menu[3] =  { _p('plugin-quicksave', 'State Slot'), slot_state, (slot_state > 0) and 'lr' or 'r' }
 	        
 	        local snapshot = quicksave_settings.snapshot
 	        if snapshot then	         
@@ -64,6 +84,14 @@ function quicksave.startplugin()
 	        else
 	        	menu[4] =  { _p('plugin-quicksave', 'Save Snapshot'), "No", 'r' }
 		end
+		
+		local autoload = quicksave_settings.autoload
+	        if autoload then	         
+	        	menu[5] =  { _p('plugin-quicksave', 'Auto Load'), "Yes", 'l' }
+	        else
+	        	menu[5] =  { _p('plugin-quicksave', 'Auto Load'), "No", 'r' }
+		end		
+	
 		
 		return menu
 	end
@@ -121,25 +149,27 @@ function quicksave.startplugin()
 		    	end	
 		    	return true
 		end
+
+		--Autoload
+                if index == 5 then
+			if event == "left" then 
+		    		quicksave_settings.autoload = false
+		    	end	
+		    	if event == "right" then 
+		    		quicksave_settings.autoload = true
+		    	end	
+		    	return true
+		end		
                 
 		return false
 	end
-        	
+               	
 	local function process_quick()
 					 
 		local inp = manager.machine.input
-		local scr = nil								 
-		 		
+										 		 		
 		if inp:seq_pressed(inp:seq_from_tokens(quicksave_settings.save_input)) then			   		 	  			   
-		   manager.machine:save(quicksave_settings.slot_state)
-		   if quicksave_settings.snapshot then			        
-		        for i,v in pairs(manager.machine.screens) do 
-		          scr = i		         	         
-		          break
-		        end		   
-		        local snap_file = emu.romname() .. "/" .. quicksave_settings.slot_state .. ".png"  		        		      		       
-		   	manager.machine.screens[scr]:snapshot(snap_file)
-		   end		  
+		    save() 
 		end
 		
 		if inp:seq_pressed(inp:seq_from_tokens(quicksave_settings.load_input)) then			   	  			   
@@ -150,6 +180,7 @@ function quicksave.startplugin()
         
 	emu.register_periodic(process_quick)
 	emu.register_prestart(load_settings)	
+	emu.register_start(auto_load)
 	emu.register_stop(save_settings)		
 	
 	emu.register_menu(menu_callback, menu_populate, _p('plugin-quicksave', 'QuickSave'))
